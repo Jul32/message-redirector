@@ -1,0 +1,200 @@
+{
+  "properties": [
+    {
+      "id": "00000000-0000-0000-0000-000000000001",
+      "name": "The Maplewood",
+      "address": "124 Maple Street, Austin, TX"
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000002",
+      "name": "Oak & Willow",
+      "address": "860 Oak Avenue, Austin, TX"
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000003",
+      "name": "Parkside Residences",
+      "address": "42 Parkside Drive, Austin, TX"
+    }
+  ],
+  "tenants": [
+    {
+      "id": "00000000-0000-0000-0000-00000000000b",
+      "name": "Olivia Rhye",
+      "email": "olivia.rhye@example.com",
+      "property_id": "00000000-0000-0000-0000-000000000001"
+    },
+    {
+      "id": "00000000-0000-0000-0000-00000000000c",
+      "name": "Phoenix Baker",
+      "email": "phoenix.baker@example.com",
+      "property_id": "00000000-0000-0000-0000-000000000002"
+    },
+    {
+      "id": "00000000-0000-0000-0000-00000000000d",
+      "name": "Lana Steiner",
+      "email": "lana.steiner@example.com",
+      "property_id": "00000000-0000-0000-0000-000000000003"
+    },
+    {
+      "id": "00000000-0000-0000-0000-00000000000e",
+      "name": "Demi Wilkinson",
+      "email": "demi.wilkinson@example.com",
+      "property_id": "00000000-0000-0000-0000-000000000001"
+    },
+    {
+      "id": "00000000-0000-0000-0000-00000000000f",
+      "name": "Drew Cano",
+      "email": "drew.cano@example.com",
+      "property_id": "00000000-0000-0000-0000-000000000002"
+    }
+  ],
+  "messages": [
+    {
+      "id": "00000000-0000-0000-0000-000000000065",
+      "tenant_id": "00000000-0000-0000-0000-00000000000b",
+      "property_id": "00000000-0000-0000-0000-000000000001",
+      "source": "SMS",
+      "content": "Hi! There\u2019s a leak under the kitchen sink. It seems to be getting worse \u2014 could someone come take a look?",
+      "category": "Maintenance",
+      "status": "Open",
+      "created_at": "2026-09-08T10:42:00Z"
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000066",
+      "tenant_id": "00000000-0000-0000-0000-00000000000c",
+      "property_id": "00000000-0000-0000-0000-000000000002",
+      "source": "Email",
+      "content": "Quick question about rent for this month. Can you confirm the bank details are still the same?",
+      "category": "Payment",
+      "status": "Open",
+      "created_at": "2026-09-08T09:18:00Z"
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000067",
+      "tenant_id": "00000000-0000-0000-0000-00000000000d",
+      "property_id": "00000000-0000-0000-0000-000000000003",
+      "source": "WhatsApp",
+      "content": "The heating in my apartment hasn\u2019t been working since last night. Could you send someone over?",
+      "category": "Maintenance",
+      "status": "Open",
+      "created_at": "2026-09-08T08:05:00Z"
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000068",
+      "tenant_id": "00000000-0000-0000-0000-00000000000e",
+      "property_id": "00000000-0000-0000-0000-000000000001",
+      "source": "SMS",
+      "content": "Emergency: there\u2019s water coming through the ceiling in the hallway. Please call me as soon as possible.",
+      "category": "Urgent",
+      "status": "Open",
+      "created_at": "2026-09-08T07:00:00Z"
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000069",
+      "tenant_id": "00000000-0000-0000-0000-00000000000f",
+      "property_id": "00000000-0000-0000-0000-000000000002",
+      "source": "Email",
+      "content": "Hi, I\u2019m expecting a large delivery on Friday. Is it okay for the courier to leave it in the lobby?",
+      "category": "General",
+      "status": "Open",
+      "created_at": "2026-09-08T06:45:00Z"
+    },
+    {
+      "id": "00000000-0000-0000-0000-00000000006a",
+      "tenant_id": "00000000-0000-0000-0000-00000000000b",
+      "property_id": "00000000-0000-0000-0000-000000000001",
+      "source": "Email",
+      "content": "Just sent over this month\u2019s rent payment. Please let me know when it arrives. Thanks!",
+      "category": "Payment",
+      "status": "Resolved",
+      "created_at": "2026-09-07T10:42:00Z"
+    },
+    {
+      "id": "00000000-0000-0000-0000-00000000006b",
+      "tenant_id": "00000000-0000-0000-0000-00000000000d",
+      "property_id": "00000000-0000-0000-0000-000000000003",
+      "source": "SMS",
+      "content": "The light on the second-floor landing keeps flickering. Would you be able to have it checked?",
+      "category": "Maintenance",
+      "status": "Open",
+      "created_at": "2026-09-07T09:18:00Z"
+    },
+    {
+      "id": "00000000-0000-0000-0000-00000000006c",
+      "tenant_id": "00000000-0000-0000-0000-00000000000c",
+      "property_id": "00000000-0000-0000-0000-000000000002",
+      "source": "WhatsApp",
+      "content": "Thanks for arranging the repair so quickly. The kitchen tap is working perfectly now!",
+      "category": "Maintenance",
+      "status": "Resolved",
+      "created_at": "2026-09-07T08:05:00Z"
+    },
+    {
+      "id": "00000000-0000-0000-0000-00000000006d",
+      "tenant_id": "00000000-0000-0000-0000-00000000000e",
+      "property_id": "00000000-0000-0000-0000-000000000001",
+      "source": "Email",
+      "content": "I\u2019d like to renew my lease when it ends in November. What are the next steps?",
+      "category": "General",
+      "status": "Open",
+      "created_at": "2026-09-07T07:00:00Z"
+    },
+    {
+      "id": "00000000-0000-0000-0000-00000000006e",
+      "tenant_id": "00000000-0000-0000-0000-00000000000f",
+      "property_id": "00000000-0000-0000-0000-000000000002",
+      "source": "SMS",
+      "content": "The front door lock is sticking again. I had a hard time getting in this morning.",
+      "category": "Maintenance",
+      "status": "Open",
+      "created_at": "2026-09-07T06:45:00Z"
+    },
+    {
+      "id": "00000000-0000-0000-0000-00000000006f",
+      "tenant_id": "00000000-0000-0000-0000-00000000000d",
+      "property_id": "00000000-0000-0000-0000-000000000003",
+      "source": "Email",
+      "content": "Could you send me a receipt for my last rent payment when you get a chance?",
+      "category": "Payment",
+      "status": "Resolved",
+      "created_at": "2026-09-07T10:42:00Z"
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000070",
+      "tenant_id": "00000000-0000-0000-0000-00000000000b",
+      "property_id": "00000000-0000-0000-0000-000000000001",
+      "source": "Other",
+      "content": "Can I reserve the community room for a small gathering next Saturday afternoon?",
+      "category": "General",
+      "status": "Resolved",
+      "created_at": "2026-09-07T09:18:00Z"
+    }
+  ],
+  "rules": [
+    {
+      "id": "00000000-0000-0000-0000-0000000000c9",
+      "keyword": "leak",
+      "category": "Maintenance"
+    },
+    {
+      "id": "00000000-0000-0000-0000-0000000000ca",
+      "keyword": "heating",
+      "category": "Maintenance"
+    },
+    {
+      "id": "00000000-0000-0000-0000-0000000000cb",
+      "keyword": "rent",
+      "category": "Payment"
+    },
+    {
+      "id": "00000000-0000-0000-0000-0000000000cc",
+      "keyword": "emergency",
+      "category": "Urgent"
+    },
+    {
+      "id": "00000000-0000-0000-0000-0000000000cd",
+      "keyword": "repair",
+      "category": "Maintenance"
+    }
+  ]
+}
