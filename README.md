@@ -83,3 +83,11 @@ The production build and TypeScript checks pass. Rule and storage regression tes
 3. Validate with a small manager pilot and add Supabase end-to-end tests for sign-in, ownership isolation, and message workflows before production use.
 
 Reference documentation: [Next.js CSS setup](https://nextjs.org/docs/app/getting-started/css), [Supabase password authentication](https://supabase.com/docs/guides/auth/passwords), [Supabase row-level security](https://supabase.com/docs/guides/database/postgres/row-level-security).
+
+## Private demo messaging
+
+Open an inbox message to see its incoming message and a local reply composer. **Send** adds an outgoing bubble with a timestamp; **Demo mode** explains that nothing is delivered. **Open in original app** only displays “External messaging integration coming soon.” It does not navigate, launch an app, or create a deep link.
+
+Demo replies never use Supabase or any messaging API. They are stored separately in this browser's localStorage under `haven-demo-replies-v1:<message-id>`. Each existing inbox message is a distinct conversation, including separate messages from the same tenant. Replies persist across closing/reopening and reloads, and do not change inbox counts, categories, or statuses. If storage is unavailable, replies remain in memory for the current tab with a visible warning. Drafts are discarded when the conversation closes. Clear a conversation's storage entry and reload to remove its demo replies.
+
+With the app running in demo mode, run `node tests/demo-messaging.cjs` to verify multiple replies, conversation isolation, reload persistence, blocked storage, and the absence of network requests or external app launches from either demo action. `npm run test:browser` verifies the existing inbox flows.

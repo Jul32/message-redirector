@@ -7,6 +7,7 @@ import {
   type ReactNode,
 } from "react";
 import Icon from "./icon";
+import DemoConversation from "./demo-conversation";
 import {
   addRule,
   changeStatus,
@@ -1245,7 +1246,6 @@ export default function Dashboard() {
                 <dd>{current.status}</dd>
               </div>
             </dl>
-            <div className="message-body">{current.content}</div>
             {error && (
               <p className="form-error" role="alert">
                 {error}
@@ -1268,6 +1268,7 @@ export default function Dashboard() {
                     : "Reopen message"}
               </button>
             </div>
+            <DemoConversation key={current.id} message={current} />
           </div>
         </Modal>
       )}
