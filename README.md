@@ -96,8 +96,28 @@ With the app running in demo mode, run `node tests/demo-messaging.cjs` to verify
 
 The first visit shows a three-step guide. Next and Back navigate the steps; Explore demo, Skip, the close button, and Escape dismiss it. The browser stores `haven-demo-guide-v1=seen` in localStorage, so it stays dismissed after reload. **View demo guide** in the top bar reopens it anytime. Clearing browser data or using another browser/origin starts a new first visit. If storage is denied, dismissal lasts for the current page session and a notice explains that future visits cannot be remembered.
 
-**Give feedback** opens an anonymous-friendly form. The three free-text questions and name/email are optional; the Yes/Maybe/No usage question is required. No name, email, account ID, or other identity is attached to anonymous responses. Each response is saved as JSON under its own localStorage key, `haven-demo-feedback-v1:<response-id>`, with its answers and timestamp. A submission lock plus a stable response ID prevents repeat clicks from creating duplicates. Save failures retain the form and permit retry instead of claiming success.
+**Give feedback** opens an anonymous-friendly form. The three free-text questions and name/email are optional; the Yes/Maybe/No usage question is required. Feedback now posts to `POST /api/feedback`, which validates the fields and sends a plain-text email through the server-side Resend SDK. Optional contact email is included in the email and used as Reply-To; it never controls the recipient or sender. The email includes every answer and the submission timestamp in UTC.
 
-There is no configured database connection or feedback backend in this checkout. **Responses stay on the tester's device; they are not collected centrally or sent to the team.** They survive reloads but are lost when that browser's site data is cleared. For a supervised test, inspect/copy the `haven-demo-feedback-v1:` entries using browser developer tools → Application/Storage → Local Storage for the app origin. Collect responses from that device before clearing its data. A central feedback endpoint would be the next step for unsupervised testing; this change adds no backend or external integrations.
+### Feedback email configuration
 
-Run `node tests/demo-testing.cjs` against the running demo app to test onboarding navigation, finish/skip/reopen behavior, anonymous feedback, optional contact fields, duplicate prevention, mobile layouts, storage failures, and retry. The existing browser tests explicitly skip first-visit onboarding before testing inbox and demo reply behavior.
+Set these server-only variables in the Vercel project's environment settings for the deployment environment you use, then redeploy:
+
+- `RESEND_API_KEY`: reuse the existing Resend API key.
+- `FEEDBACK_EMAIL`: the address that should receive feedback (one address).
+
+Never prefix these with `NEXT_PUBLIC_`. For local live testing, configure them in the ignored `.env.local` file and restart the app. `.env.example` contains empty placeholders only. No secrets or personal recipient addresses are committed.
+
+The sender is `Local Haven Feedback <onboarding@resend.dev>`. Resend's testing domain can only send to the email address associated with the Resend account; for another recipient, a verified sending domain and a corresponding sender address will be needed. See [Resend's testing sender restriction](https://resend.com/docs/knowledge-base/403-error-resend-dev-domain).
+
+Missing/invalid `FEEDBACK_EMAIL` or a missing key returns HTTP 503 with a friendly client message and a configuration diagnostic in server logs. Provider failures return HTTP 502. The client preserves answers, disables the form during sending, and only shows success after Resend accepts the email. Acceptance does not guarantee inbox delivery; inspect Resend's delivery status for that. The route never returns provider details, the recipient address, or the API key. Application logs contain fixed diagnostic messages only.
+
+A submission lock prevents repeated clicks. Retrying unchanged answers from the same open form reuses the submission ID and timestamp, which are sent to Resend with an idempotency key. Resend deduplicates those requests for 24 hours. Editing answers creates a new ID to avoid mismatched-payload conflicts. Closing/reopening the form starts a new submission. See [Resend idempotency](https://resend.com/docs/dashboard/emails/idempotency-keys).
+
+New feedback is no longer saved in localStorage; old `haven-demo-feedback-v1:` entries remain untouched and are not automatically emailed. Onboarding state and simulated conversation replies are unchanged and still local-only. No tenant email, SMS, or WhatsApp integration has been added.
+
+### Feedback verification
+
+- `npm test`: validation, missing config, sender/recipient mapping, optional identity, provider errors, duplicate request keys, and secret-free production diagnostics. The actual Resend SDK runs against a mocked HTTP transport using synthetic credentials; no test emails are sent.
+- `node tests/demo-testing.cjs`: onboarding plus anonymous/contact feedback, loading/disabled states, duplicate-click prevention, friendly server errors and retry. The feedback endpoint is mocked in this browser suite to avoid emailing on every test run.
+- `npm run test:browser` and `node tests/demo-messaging.cjs`: unchanged inbox and local reply workflows.
+- Live delivery requires both server environment variables. Open the form on the configured deployment, submit test feedback, then check Resend's delivery status and the recipient inbox. Neither credential nor recipient is configured locally in this checkout, so live acceptance/delivery could not be verified here.

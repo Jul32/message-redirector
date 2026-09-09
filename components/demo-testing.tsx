@@ -6,7 +6,7 @@ import {
   feedbackId,
   hasSeenGuide,
   rememberGuide,
-  saveFeedback,
+  sendFeedback,
   type DemoFeedback,
 } from "@/lib/demo-testing";
 
@@ -29,6 +29,7 @@ export default function DemoTesting() {
   const [panel, setPanel] = useState<"guide" | "feedback" | null>(null);
   const [step, setStep] = useState(0);
   const [notice, setNotice] = useState("");
+  const [sendingFeedback, setSendingFeedback] = useState(false);
   useEffect(() => {
     if (!hasSeenGuide()) setPanel("guide");
   }, []);
@@ -112,46 +113,73 @@ export default function DemoTesting() {
         </Modal>
       )}
       {panel === "feedback" && (
-        <Modal title="Give feedback" onClose={() => setPanel(null)}>
-          <FeedbackForm onDone={() => setPanel(null)} />
+        <Modal
+          title="Give feedback"
+          onClose={() => !sendingFeedback && setPanel(null)}
+        >
+          <FeedbackForm
+            onDone={() => setPanel(null)}
+            onSending={setSendingFeedback}
+          />
         </Modal>
       )}
     </>
   );
 }
 
-function FeedbackForm({ onDone }: { onDone: () => void }) {
+function FeedbackForm({
+  onDone,
+  onSending,
+}: {
+  onDone: () => void;
+  onSending: (sending: boolean) => void;
+}) {
+  const [sending, setSending] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
   const locked = useRef(false);
-  const id = useRef<string | null>(null);
-  function submit(event: FormEvent<HTMLFormElement>) {
+  const pending = useRef<{ fingerprint: string; payload: DemoFeedback } | null>(
+    null,
+  );
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (locked.current) return;
     locked.current = true;
     setError("");
+    setSending(true);
+    onSending(true);
     try {
       const form = new FormData(event.currentTarget);
-      id.current ??= feedbackId();
       const text = (key: string) => String(form.get(key) ?? "").trim();
-      saveFeedback({
-        id: id.current,
-        createdAt: new Date().toISOString(),
+      const answers = {
         liked: text("liked"),
         confusing: text("confusing"),
         missing: text("missing"),
         wouldUse: text("wouldUse") as DemoFeedback["wouldUse"],
         ...(text("name") ? { name: text("name") } : {}),
         ...(text("email") ? { email: text("email") } : {}),
-      });
+      };
+      const fingerprint = JSON.stringify(answers);
+      if (pending.current?.fingerprint !== fingerprint) {
+        pending.current = {
+          fingerprint,
+          payload: {
+            ...answers,
+            id: feedbackId(),
+            createdAt: new Date().toISOString(),
+          },
+        };
+      }
+      await sendFeedback(pending.current.payload);
       setSubmitted(true);
     } catch (error) {
       locked.current = false;
       setError(
-        error instanceof Error
-          ? error.message
-          : "Could not save your feedback. Please try again.",
+        "Feedback could not be sent right now. Please try again shortly. Your answers have been kept.",
       );
+    } finally {
+      setSending(false);
+      onSending(false);
     }
   }
   if (submitted)
@@ -159,7 +187,7 @@ function FeedbackForm({ onDone }: { onDone: () => void }) {
       <div className="feedback-success">
         <h3>Thank you for your feedback.</h3>
         <p role="status">
-          Saved in this browser. It has not been sent to the Local Haven team.
+          Your feedback has been sent to the Local Haven team.
         </p>
         <button className="primary" onClick={onDone}>
           Done
@@ -167,67 +195,74 @@ function FeedbackForm({ onDone }: { onDone: () => void }) {
       </div>
     );
   return (
-    <form className="feedback-form" onSubmit={submit}>
-      <p className="form-description">
-        Help shape Local Haven. You can respond anonymously.
-      </p>
-      <p className="feedback-storage-note">
-        Demo storage: feedback stays in this browser only. It is not sent to the
-        team and is lost if browser data is cleared.
-      </p>
-      <label>
-        What did you like?
-        <textarea name="liked" rows={2} maxLength={4000} />
-      </label>
-      <label>
-        What was confusing?
-        <textarea name="confusing" rows={2} maxLength={4000} />
-      </label>
-      <label>
-        What feels missing?
-        <textarea name="missing" rows={2} maxLength={4000} />
-      </label>
-      <fieldset>
-        <legend>
-          Would you use something like this? <span>(required)</span>
-        </legend>
-        <div className="feedback-options">
-          {["Yes", "Maybe", "No"].map((answer) => (
-            <label key={answer}>
-              <input type="radio" name="wouldUse" value={answer} required />
-              {answer}
-            </label>
-          ))}
+    <form className="feedback-form" onSubmit={submit} aria-busy={sending}>
+      <fieldset disabled={sending} className="feedback-fields">
+        <p className="form-description">
+          Help shape Local Haven. You can respond anonymously.
+        </p>
+        <p className="feedback-storage-note">
+          Your feedback will be emailed to the Local Haven team. Name and email
+          are optional.
+        </p>
+        <label>
+          What did you like?
+          <textarea name="liked" rows={2} maxLength={4000} />
+        </label>
+        <label>
+          What was confusing?
+          <textarea name="confusing" rows={2} maxLength={4000} />
+        </label>
+        <label>
+          What feels missing?
+          <textarea name="missing" rows={2} maxLength={4000} />
+        </label>
+        <fieldset>
+          <legend>
+            Would you use something like this? <span>(required)</span>
+          </legend>
+          <div className="feedback-options">
+            {["Yes", "Maybe", "No"].map((answer) => (
+              <label key={answer}>
+                <input type="radio" name="wouldUse" value={answer} required />
+                {answer}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+        <div className="feedback-identity">
+          <label>
+            Name (optional)
+            <input name="name" maxLength={120} autoComplete="name" />
+          </label>
+          <label>
+            Email (optional)
+            <input
+              name="email"
+              type="email"
+              maxLength={254}
+              autoComplete="email"
+            />
+          </label>
+        </div>
+        {error && (
+          <p className="form-error" role="alert">
+            {error}
+          </p>
+        )}
+        <div className="form-actions">
+          <button
+            type="button"
+            className="secondary"
+            onClick={onDone}
+            disabled={sending}
+          >
+            Cancel
+          </button>
+          <button className="primary" type="submit" disabled={sending}>
+            {sending ? "Sending…" : "Submit"}
+          </button>
         </div>
       </fieldset>
-      <div className="feedback-identity">
-        <label>
-          Name (optional)
-          <input name="name" maxLength={120} autoComplete="name" />
-        </label>
-        <label>
-          Email (optional)
-          <input
-            name="email"
-            type="email"
-            maxLength={254}
-            autoComplete="email"
-          />
-        </label>
-      </div>
-      {error && (
-        <p className="form-error" role="alert">
-          {error}
-        </p>
-      )}
-      <div className="form-actions">
-        <button type="button" className="secondary" onClick={onDone}>
-          Cancel
-        </button>
-        <button className="primary" type="submit">
-          Submit
-        </button>
-      </div>
     </form>
   );
 }

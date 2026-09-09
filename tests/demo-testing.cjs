@@ -8,6 +8,20 @@ const guideTitle = "A quick guide to Local Haven";
   try {
     const page = await browser.newPage();
     const errors = [];
+    const records = [];
+    let release;
+    const firstResponse = new Promise((resolve) => {
+      release = resolve;
+    });
+    await page.route("**/api/feedback", async (route) => {
+      records.push(route.request().postDataJSON());
+      if (records.length === 1) await firstResponse;
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true }),
+      });
+    });
     page.on("pageerror", (e) => errors.push(e.message));
     await page.goto(baseURL);
     await page.getByRole("dialog", { name: guideTitle }).waitFor();
@@ -66,14 +80,24 @@ const guideTitle = "A quick guide to Local Haven";
       form.requestSubmit();
       form.requestSubmit();
     });
+    await page.getByRole("button", { name: "Sending…", exact: true }).waitFor();
+    assert.equal(
+      await page
+        .getByRole("button", { name: "Sending…", exact: true })
+        .isDisabled(),
+      true,
+    );
+    await page.keyboard.press("Escape");
+    assert.equal(
+      await page
+        .getByRole("dialog", { name: "Give feedback", exact: true })
+        .count(),
+      1,
+    );
+    release();
     await page
       .getByText("Thank you for your feedback.", { exact: true })
       .waitFor();
-    let records = await page.evaluate(() =>
-      Object.keys(localStorage)
-        .filter((k) => k.startsWith("haven-demo-feedback-v1:"))
-        .map((k) => JSON.parse(localStorage.getItem(k))),
-    );
     assert.equal(records.length, 1);
     assert.equal(records[0].wouldUse, "Maybe");
     assert.equal(records[0].liked, "The unified inbox");
@@ -89,7 +113,7 @@ const guideTitle = "A quick guide to Local Haven";
             k.startsWith("haven-demo-feedback-v1:"),
           ).length,
       ),
-      1,
+      0,
     );
     await page.setViewportSize({ width: 390, height: 844 });
     await page
@@ -106,11 +130,6 @@ const guideTitle = "A quick guide to Local Haven";
     );
     await page.getByRole("button", { name: "Submit", exact: true }).click();
     await page.getByRole("button", { name: "Done", exact: true }).click();
-    records = await page.evaluate(() =>
-      Object.keys(localStorage)
-        .filter((k) => k.startsWith("haven-demo-feedback-v1:"))
-        .map((k) => JSON.parse(localStorage.getItem(k))),
-    );
     assert.equal(records.length, 2);
     assert.ok(
       records.some(
@@ -137,7 +156,7 @@ const guideTitle = "A quick guide to Local Haven";
       .click();
     await fresh.getByRole("button", { name: "Cancel", exact: true }).click();
     assert.equal(await fresh.getByRole("dialog").count(), 0);
-    // Storage failure is honest, preserves the form, and allows a successful retry.
+    // Server failure retains answers, retries reuse their ID, and feedback does not need localStorage.
     const blocked = await browser.newContext();
     await blocked.addInitScript(() => {
       window.failWrites = true;
@@ -148,6 +167,19 @@ const guideTitle = "A quick guide to Local Haven";
       };
     });
     const p = await blocked.newPage();
+    const attempts = [];
+    await p.route("**/api/feedback", async (route) => {
+      attempts.push(route.request().postDataJSON());
+      await route.fulfill({
+        status: attempts.length === 1 ? 502 : 200,
+        contentType: "application/json",
+        body: JSON.stringify(
+          attempts.length === 1
+            ? { error: "Private provider diagnostic" }
+            : { success: true },
+        ),
+      });
+    });
     await p.goto(baseURL);
     await p.getByRole("button", { name: "Skip", exact: true }).click();
     await p
@@ -159,16 +191,14 @@ const guideTitle = "A quick guide to Local Haven";
     await p.getByRole("button", { name: "Submit", exact: true }).click();
     await p
       .getByRole("alert")
-      .filter({ hasText: "could not be saved" })
+      .filter({ hasText: "could not be sent" })
       .waitFor();
     assert.equal(
       await p.getByLabel("What did you like?").inputValue(),
       "Keep this draft",
     );
     assert.equal(await p.locator(".feedback-success").count(), 0);
-    await p.evaluate(() => {
-      window.failWrites = false;
-    });
+    assert.equal(await p.getByText("Private provider diagnostic").count(), 0);
     await p.getByRole("button", { name: "Submit", exact: true }).click();
     await p
       .getByText("Thank you for your feedback.", { exact: true })
@@ -180,10 +210,12 @@ const guideTitle = "A quick guide to Local Haven";
             k.startsWith("haven-demo-feedback-v1:"),
           ).length,
       ),
-      1,
+      0,
     );
+    assert.equal(attempts.length, 2);
+    assert.deepEqual(attempts[0], attempts[1]);
     console.log(
-      "PASS: first visit, Next/Back/finish/skip/reopen, reload memory, anonymous and optional feedback, duplicate prevention, mobile, storage errors and retry.",
+      "PASS: first visit, Next/Back/finish/skip/reopen, reload memory, anonymous and optional feedback, duplicate prevention, mobile, sending state, server failures and idempotent retry (mocked endpoint).",
     );
   } finally {
     await browser.close();

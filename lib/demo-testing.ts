@@ -1,7 +1,6 @@
 import { newDemoId } from "./demo-storage";
 
 export const onboardingKey = "haven-demo-guide-v1";
-export const feedbackPrefix = "haven-demo-feedback-v1:";
 let guideDismissed = false;
 
 export function hasSeenGuide(): boolean {
@@ -38,17 +37,21 @@ export function feedbackId() {
   return newDemoId();
 }
 
-/** One key per response avoids overwriting other responses. Same ID is idempotent. */
-export function saveFeedback(feedback: DemoFeedback): void {
-  if (!["Yes", "Maybe", "No"].includes(feedback.wouldUse))
-    throw new Error("Choose Yes, Maybe, or No.");
-  try {
-    const key = feedbackPrefix + feedback.id;
-    if (localStorage.getItem(key)) return;
-    localStorage.setItem(key, JSON.stringify(feedback));
-  } catch {
+/** Feedback is sent only through the server; no credentials are available here. */
+export async function sendFeedback(feedback: DemoFeedback): Promise<void> {
+  const response = await fetch("/api/feedback", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(feedback),
+    signal: AbortSignal.timeout(20000),
+  });
+  if (!response.ok)
     throw new Error(
-      "Feedback could not be saved in this browser. Allow browser storage and try again. Your answers are still here.",
+      "Feedback could not be sent right now. Please try again shortly. Your answers have been kept.",
     );
-  }
+  const result = await response.json();
+  if (result.success !== true)
+    throw new Error(
+      "Could not confirm your feedback was sent. Please try again.",
+    );
 }
