@@ -1,41 +1,57 @@
-import { createClient } from "@supabase/supabase-js";
 import seed from "./seed.json";
 import { categorize } from "./rules";
 import type { InboxData, Message, Rule, Status } from "./types";
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-export const supabase = url && key ? createClient(url, key) : null;
+let databaseMode = false;
+export function usingDatabase() {
+  return databaseMode;
+}
+export async function demoRequest(
+  body?: Record<string, unknown>,
+  conversation?: string,
+) {
+  try {
+    const response = await fetch(
+      "/api/demo" +
+        (conversation
+          ? "?conversation=" + encodeURIComponent(conversation)
+          : ""),
+      {
+        method: body ? "POST" : "GET",
+        cache: "no-store",
+        ...(body
+          ? {
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(body),
+            }
+          : {}),
+      },
+    );
+    if (!response.ok)
+      throw new Error(
+        "The demo workspace could not be loaded or saved. Please try again.",
+      );
+    return response.json();
+  } catch {
+    throw new Error(
+      "The demo workspace could not be loaded or saved. Please try again.",
+    );
+  }
+}
 import { newDemoId, readDemoData, writeDemoData } from "./demo-storage";
 export const initialData = seed as InboxData;
 export async function loadData(): Promise<InboxData> {
-  if (!supabase) {
-    return readDemoData(initialData);
-  }
-  const tables = ["properties", "tenants", "messages", "rules"] as const;
-  const results = await Promise.all(
-    tables.map((table) => supabase!.from(table).select("*")),
-  );
-  for (const result of results) if (result.error) throw result.error;
-  return Object.fromEntries(
-    tables.map((table, i) => [table, results[i].data]),
-  ) as unknown as InboxData;
+  const result = await demoRequest();
+  databaseMode = result.mode === "supabase";
+  return databaseMode ? result.data : readDemoData(initialData);
 }
 export function persist(data: InboxData) {
-  if (!supabase) writeDemoData(data);
+  if (!databaseMode) writeDemoData(data);
 }
 export async function createMessage(
   input: Pick<Message, "tenant_id" | "property_id" | "source" | "content">,
   rules: Rule[],
 ): Promise<Message> {
-  if (supabase) {
-    const { data, error } = await supabase
-      .from("messages")
-      .insert(input)
-      .select()
-      .single();
-    if (error) throw error;
-    return data;
-  }
+  if (databaseMode) return demoRequest({ action: "message", ...input });
   return {
     ...input,
     id: newDemoId(),
@@ -45,39 +61,15 @@ export async function createMessage(
   };
 }
 export async function changeStatus(id: string, status: Status) {
-  if (supabase) {
-    const { error } = await supabase
-      .from("messages")
-      .update({ status })
-      .eq("id", id)
-      .select()
-      .single();
-    if (error) throw error;
-  }
+  if (databaseMode) await demoRequest({ action: "status", id, status });
 }
 export async function addRule(
   keyword: string,
   category: Rule["category"],
 ): Promise<Rule> {
-  if (supabase) {
-    const { data, error } = await supabase
-      .from("rules")
-      .insert({ keyword, category })
-      .select()
-      .single();
-    if (error) throw error;
-    return data;
-  }
+  if (databaseMode) return demoRequest({ action: "rule", keyword, category });
   return { id: newDemoId(), keyword, category };
 }
 export async function deleteRule(id: string) {
-  if (supabase) {
-    const { error } = await supabase
-      .from("rules")
-      .delete()
-      .eq("id", id)
-      .select()
-      .single();
-    if (error) throw error;
-  }
+  if (databaseMode) await demoRequest({ action: "deleteRule", id });
 }

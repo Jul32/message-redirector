@@ -20,6 +20,8 @@ export interface Tenant {
   property_id: string;
 }
 export interface Message {
+  direction?: "incoming" | "outgoing";
+  reply_to?: string | null;
   id: string;
   tenant_id: string;
   property_id: string;

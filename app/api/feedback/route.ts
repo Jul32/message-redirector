@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import { getSupabase } from "../../../lib/supabase-server.ts";
 
 export const runtime = "nodejs";
 const unavailable =
@@ -18,7 +19,10 @@ export async function POST(request: Request) {
     const host = request.headers.get("host") ?? new URL(request.url).host;
     try {
       const source = new URL(origin);
-      if (!["http:", "https:"].includes(source.protocol) || source.host !== host)
+      if (
+        !["http:", "https:"].includes(source.protocol) ||
+        source.host !== host
+      )
         return fail("Please submit feedback from Local Haven.", 403);
     } catch {
       return fail("Please submit feedback from Local Haven.", 403);
@@ -65,6 +69,32 @@ export async function POST(request: Request) {
   const contact = typeof input.email === "string" ? input.email.trim() : "";
   if (contact && !emailPattern.test(contact))
     return fail("Please check your email address.", 400);
+
+  // Save before emailing. The write-only RPC makes retries safe without granting
+  // public readers access to names, email addresses, or previous feedback.
+  try {
+    const db = getSupabase();
+    if (db) {
+      const { error } = await db.rpc("submit_demo_feedback", {
+        payload: {
+          id: input.id,
+          liked: input.liked,
+          confusing: input.confusing,
+          missing: input.missing,
+          would_use: input.wouldUse,
+          name: input.name || null,
+          email: contact || null,
+          created_at: input.createdAt,
+        },
+      });
+      if (error) throw error;
+    }
+  } catch {
+    console.error(
+      "[feedback] Supabase persistence failed. Email was not sent.",
+    );
+    return fail(unavailable, 503);
+  }
 
   // These variables are read only inside the server route, never returned or logged.
   const apiKey = process.env.RESEND_API_KEY;

@@ -12,7 +12,7 @@ import {
   initialData,
   loadData,
   persist,
-  supabase,
+  usingDatabase,
 } from "@/lib/store";
 import {
   categories,
@@ -39,9 +39,14 @@ function Badge({ category }: { category: string }) {
   );
 }
 export default function Dashboard() {
-  const [data, setData] = useState<InboxData>(initialData);
+  const [data, setData] = useState<InboxData>({
+    properties: [],
+    tenants: [],
+    messages: [],
+    rules: [],
+  });
   const [ready, setReady] = useState(false);
-  const [loggedIn, setLoggedIn] = useState(!supabase);
+  const [loaded, setLoaded] = useState(false);
   const [view, setView] = useState("Inbox");
   const [query, setQuery] = useState("");
   const [property, setProperty] = useState("");
@@ -60,41 +65,23 @@ export default function Dashboard() {
   const [content, setContent] = useState("");
   const [tenantId, setTenantId] = useState(initialData.tenants[0].id);
   const [source, setSource] = useState<Source>("SMS");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [signup, setSignup] = useState(false);
   async function refresh() {
     setError("");
     try {
       const next = await loadData();
       setData(next);
+      setLoaded(true);
       setStorageNotice(storageWarning());
       setTenantId(next.tenants[0]?.id ?? "");
       setReady(true);
     } catch (e) {
-      setError(errorText(e));
+      setError("The demo workspace could not be loaded. Please try again.");
+      setLoaded(false);
       setReady(true);
     }
   }
   useEffect(() => {
-    if (!supabase) {
-      void refresh();
-      return;
-    }
-    void supabase.auth.getSession().then(({ data: { session }, error }) => {
-      if (error) setError(error.message);
-      setLoggedIn(!!session);
-      if (session) void refresh();
-      else setReady(true);
-    });
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setLoggedIn(!!session);
-      if (session) setTimeout(() => void refresh(), 0);
-      else setData({ properties: [], tenants: [], messages: [], rules: [] });
-    });
-    return () => subscription.unsubscribe();
+    void refresh();
   }, []);
   useEffect(() => {
     if (!notice) return;
@@ -218,18 +205,6 @@ export default function Dashboard() {
       );
     });
   }
-  async function auth(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    await run(async () => {
-      if (!supabase) return;
-      const result = signup
-        ? await supabase.auth.signUp({ email, password })
-        : await supabase.auth.signInWithPassword({ email, password });
-      if (result.error) throw result.error;
-      if (signup && !result.data.session)
-        setNotice("Check your email to confirm your account, then sign in.");
-    });
-  }
   if (!ready)
     return (
       <main className="auth-screen">
@@ -237,64 +212,6 @@ export default function Dashboard() {
           <h1>Opening your workspace…</h1>
           <p role="status">Loading your inbox and controls.</p>
           <noscript>Enable JavaScript to use the inbox.</noscript>
-        </div>
-      </main>
-    );
-  if (!loggedIn)
-    return (
-      <main className="auth-screen">
-        <div className="auth-card">
-          <div className="brand">
-            <span className="brand-symbol">
-              <Icon name="leaf" size={26} />
-            </span>
-            haven<span className="brand-period">.</span>
-          </div>
-          <h1>{signup ? "Make room for clarity." : "Welcome back."}</h1>
-          <p>Your properties. Your people. One inbox.</p>
-          <form onSubmit={auth}>
-            <label>
-              Email
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                autoComplete="email"
-              />
-            </label>
-            <label>
-              Password
-              <input
-                type="password"
-                minLength={8}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                autoComplete={signup ? "new-password" : "current-password"}
-              />
-            </label>
-            {error && (
-              <p role="alert" className="form-error">
-                {error}
-              </p>
-            )}
-            <button disabled={busy} className="primary">
-              {busy ? "Please wait…" : signup ? "Create account" : "Sign in"}
-            </button>
-          </form>
-          <button
-            className="text-button"
-            onClick={() => {
-              setSignup(!signup);
-              setError("");
-            }}
-          >
-            {signup
-              ? "Already have an account? Sign in"
-              : "New to Haven? Create an account"}
-          </button>
-          {notice && <p role="status">{notice}</p>}
         </div>
       </main>
     );
@@ -373,7 +290,7 @@ export default function Dashboard() {
             </p>
             <span className="demo-indicator">
               <span className="dot" />
-              {supabase ? "Connected workspace" : "Demo workspace"}
+              {usingDatabase() ? "Connected workspace" : "Demo workspace"}
             </span>
           </div>
           <button className="nav-item" onClick={() => setModal("help")}>
@@ -384,25 +301,12 @@ export default function Dashboard() {
           <div className="profile">
             <span className="avatar profile-avatar">JD</span>
             <div>
-              <strong>{supabase ? "Your workspace" : "Jamie Davis"}</strong>
+              <strong>
+                {usingDatabase() ? "Your workspace" : "Jamie Davis"}
+              </strong>
               <span>Property manager</span>
             </div>
-            {supabase ? (
-              <button
-                className="icon-button"
-                aria-label="Sign out"
-                onClick={() =>
-                  void run(async () => {
-                    const { error } = await supabase!.auth.signOut();
-                    if (error) throw error;
-                  })
-                }
-              >
-                <Icon name="logout" size={18} />
-              </button>
-            ) : (
-              <span className="demo-label">DEMO</span>
-            )}
+            <span className="demo-label">DEMO</span>
           </div>
         </div>
       </aside>
@@ -445,7 +349,7 @@ export default function Dashboard() {
                 setError("");
                 setModal(view === "Rules" ? "rule" : "message");
               }}
-              disabled={!ready}
+              disabled={!ready || !loaded}
             >
               <Icon name="plus" size={18} />
               {view === "Rules" ? "Add rule" : "New message"}
@@ -793,22 +697,6 @@ export default function Dashboard() {
                         ? "Try another search or adjust your filters."
                         : "Create a message or load the example workspace to get started."}
                     </p>
-                    {!data.properties.length && supabase && (
-                      <button
-                        className="primary"
-                        disabled={busy}
-                        onClick={() =>
-                          void run(async () => {
-                            const { error } =
-                              await supabase!.rpc("seed_demo_data");
-                            if (error) throw error;
-                            await refresh();
-                          })
-                        }
-                      >
-                        Load example workspace
-                      </button>
-                    )}
                   </div>
                 )}
                 <div className="table-footer">
@@ -1099,8 +987,8 @@ export default function Dashboard() {
           <div className="help-content">
             <h2>Westside Living</h2>
             <p>
-              {supabase
-                ? "Your signed-in property workspace."
+              {usingDatabase()
+                ? "Shared demo workspace · Changes are saved in Supabase."
                 : "Demo workspace · Changes are saved in this browser."}
             </p>
             <p>
@@ -1134,9 +1022,9 @@ export default function Dashboard() {
               see the full details, resolve it, or reopen it.
             </p>
             <p>
-              {supabase
-                ? "Your workspace is saved securely in Supabase and belongs to your signed-in account."
-                : "You’re exploring a demo workspace. Changes are saved in this browser. Configure Supabase using the README to enable accounts and database storage."}
+              {usingDatabase()
+                ? "This is a shared public demo saved in Supabase. Use fictional data only; other testers can see conversations."
+                : "You’re exploring a demo workspace. Changes are saved in this browser. Configure Supabase using the README to enable shared database storage."}
             </p>
             <button className="primary" onClick={() => setModal(null)}>
               Got it
