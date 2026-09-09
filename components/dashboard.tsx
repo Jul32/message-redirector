@@ -299,10 +299,10 @@ export default function Dashboard() {
             <Icon name="arrow" size={15} />
           </button>
           <div className="profile">
-            <span className="avatar profile-avatar">JD</span>
+            <span className="avatar profile-avatar">DM</span>
             <div>
               <strong>
-                {usingDatabase() ? "Your workspace" : "Jamie Davis"}
+                {usingDatabase() ? "Your workspace" : "Demo Manager"}
               </strong>
               <span>Property manager</span>
             </div>
@@ -354,6 +354,13 @@ export default function Dashboard() {
               <Icon name="plus" size={18} />
               {view === "Rules" ? "Add rule" : "New message"}
             </button>
+          </div>
+          <div className="demo-privacy-bar">
+            <span>
+              Fictional demo data. Please do not enter real tenant or sensitive
+              information.
+            </span>
+            <a href="/privacy">Privacy Policy</a>
           </div>
           {storageNotice && (
             <div className="storage-notice" role="status">

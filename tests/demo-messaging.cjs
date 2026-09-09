@@ -122,7 +122,7 @@ const baseURL = process.env.TEST_BASE_URL || "http://127.0.0.1:3000";
     await close();
     await page
       .locator("tbody .tenant-message")
-      .filter({ hasText: "Olivia Rhye" })
+      .filter({ hasText: "Demo Tenant Olivia" })
       .nth(1)
       .click();
     assert.equal(

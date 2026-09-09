@@ -241,14 +241,23 @@ function FeedbackForm({
               type="email"
               maxLength={254}
               autoComplete="email"
+              aria-describedby="feedback-email-privacy"
             />
           </label>
         </div>
+        <p id="feedback-email-privacy" className="privacy-disclosure">
+          Email is optional. If provided, it will only be used to follow up
+          about your feedback.
+        </p>
         {error && (
           <p className="form-error" role="alert">
             {error}
           </p>
         )}
+        <p className="privacy-disclosure">
+          By submitting feedback, you acknowledge that your information will be
+          handled as described in our <a href="/privacy">Privacy Policy</a>.
+        </p>
         <div className="form-actions">
           <button
             type="button"

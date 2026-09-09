@@ -203,7 +203,7 @@ const baseURL = process.env.TEST_BASE_URL || "http://127.0.0.1:3000";
     );
     assert.match(
       await page.locator("tbody tr").first().innerText(),
-      /Phoenix Baker/,
+      /Demo Tenant Phoenix/,
     );
     await page.locator("tbody .tenant-message").first().click();
     await page.getByRole("button", { name: "Mark as resolved" }).click();

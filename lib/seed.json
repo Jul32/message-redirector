@@ -3,48 +3,48 @@
     {
       "id": "00000000-0000-0000-0000-000000000001",
       "name": "The Maplewood",
-      "address": "124 Maple Street, Austin, TX"
+      "address": "Demo address 1 (fictional)"
     },
     {
       "id": "00000000-0000-0000-0000-000000000002",
       "name": "Oak & Willow",
-      "address": "860 Oak Avenue, Austin, TX"
+      "address": "Demo address 2 (fictional)"
     },
     {
       "id": "00000000-0000-0000-0000-000000000003",
       "name": "Parkside Residences",
-      "address": "42 Parkside Drive, Austin, TX"
+      "address": "Demo address 3 (fictional)"
     }
   ],
   "tenants": [
     {
       "id": "00000000-0000-0000-0000-00000000000b",
-      "name": "Olivia Rhye",
-      "email": "olivia.rhye@example.com",
+      "name": "Demo Tenant Olivia",
+      "email": "demo-tenant-1@example.com",
       "property_id": "00000000-0000-0000-0000-000000000001"
     },
     {
       "id": "00000000-0000-0000-0000-00000000000c",
-      "name": "Phoenix Baker",
-      "email": "phoenix.baker@example.com",
+      "name": "Demo Tenant Phoenix",
+      "email": "demo-tenant-2@example.com",
       "property_id": "00000000-0000-0000-0000-000000000002"
     },
     {
       "id": "00000000-0000-0000-0000-00000000000d",
-      "name": "Lana Steiner",
-      "email": "lana.steiner@example.com",
+      "name": "Demo Tenant Lana",
+      "email": "demo-tenant-3@example.com",
       "property_id": "00000000-0000-0000-0000-000000000003"
     },
     {
       "id": "00000000-0000-0000-0000-00000000000e",
-      "name": "Demi Wilkinson",
-      "email": "demi.wilkinson@example.com",
+      "name": "Demo Tenant Demi",
+      "email": "demo-tenant-4@example.com",
       "property_id": "00000000-0000-0000-0000-000000000001"
     },
     {
       "id": "00000000-0000-0000-0000-00000000000f",
-      "name": "Drew Cano",
-      "email": "drew.cano@example.com",
+      "name": "Demo Tenant Drew",
+      "email": "demo-tenant-5@example.com",
       "property_id": "00000000-0000-0000-0000-000000000002"
     }
   ],

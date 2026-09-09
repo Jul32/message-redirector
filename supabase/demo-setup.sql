@@ -46,14 +46,14 @@ create unique index if not exists demo_rule_keyword on public.rules(lower(trim(k
 create index if not exists feedback_created on public.feedback(created_at desc);
 
 -- Fictional demo records; seeded before the categorization trigger is installed.
-insert into public.properties (id,name,address) values ('00000000-0000-0000-0000-000000000001','The Maplewood','124 Maple Street, Austin, TX') on conflict do nothing;
-insert into public.properties (id,name,address) values ('00000000-0000-0000-0000-000000000002','Oak & Willow','860 Oak Avenue, Austin, TX') on conflict do nothing;
-insert into public.properties (id,name,address) values ('00000000-0000-0000-0000-000000000003','Parkside Residences','42 Parkside Drive, Austin, TX') on conflict do nothing;
-insert into public.tenants (id,name,email,property_id) values ('00000000-0000-0000-0000-00000000000b','Olivia Rhye','olivia.rhye@example.com','00000000-0000-0000-0000-000000000001') on conflict do nothing;
-insert into public.tenants (id,name,email,property_id) values ('00000000-0000-0000-0000-00000000000c','Phoenix Baker','phoenix.baker@example.com','00000000-0000-0000-0000-000000000002') on conflict do nothing;
-insert into public.tenants (id,name,email,property_id) values ('00000000-0000-0000-0000-00000000000d','Lana Steiner','lana.steiner@example.com','00000000-0000-0000-0000-000000000003') on conflict do nothing;
-insert into public.tenants (id,name,email,property_id) values ('00000000-0000-0000-0000-00000000000e','Demi Wilkinson','demi.wilkinson@example.com','00000000-0000-0000-0000-000000000001') on conflict do nothing;
-insert into public.tenants (id,name,email,property_id) values ('00000000-0000-0000-0000-00000000000f','Drew Cano','drew.cano@example.com','00000000-0000-0000-0000-000000000002') on conflict do nothing;
+insert into public.properties (id,name,address) values ('00000000-0000-0000-0000-000000000001','The Maplewood','Demo address 1 (fictional)') on conflict do nothing;
+insert into public.properties (id,name,address) values ('00000000-0000-0000-0000-000000000002','Oak & Willow','Demo address 2 (fictional)') on conflict do nothing;
+insert into public.properties (id,name,address) values ('00000000-0000-0000-0000-000000000003','Parkside Residences','Demo address 3 (fictional)') on conflict do nothing;
+insert into public.tenants (id,name,email,property_id) values ('00000000-0000-0000-0000-00000000000b','Demo Tenant Olivia','demo-tenant-1@example.com','00000000-0000-0000-0000-000000000001') on conflict do nothing;
+insert into public.tenants (id,name,email,property_id) values ('00000000-0000-0000-0000-00000000000c','Demo Tenant Phoenix','demo-tenant-2@example.com','00000000-0000-0000-0000-000000000002') on conflict do nothing;
+insert into public.tenants (id,name,email,property_id) values ('00000000-0000-0000-0000-00000000000d','Demo Tenant Lana','demo-tenant-3@example.com','00000000-0000-0000-0000-000000000003') on conflict do nothing;
+insert into public.tenants (id,name,email,property_id) values ('00000000-0000-0000-0000-00000000000e','Demo Tenant Demi','demo-tenant-4@example.com','00000000-0000-0000-0000-000000000001') on conflict do nothing;
+insert into public.tenants (id,name,email,property_id) values ('00000000-0000-0000-0000-00000000000f','Demo Tenant Drew','demo-tenant-5@example.com','00000000-0000-0000-0000-000000000002') on conflict do nothing;
 insert into public.rules (id,keyword,category) values ('00000000-0000-0000-0000-0000000000c9','leak','Maintenance') on conflict do nothing;
 insert into public.rules (id,keyword,category) values ('00000000-0000-0000-0000-0000000000ca','heating','Maintenance') on conflict do nothing;
 insert into public.rules (id,keyword,category) values ('00000000-0000-0000-0000-0000000000cb','rent','Payment') on conflict do nothing;
