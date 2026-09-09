@@ -37,6 +37,10 @@ const baseURL = process.env.TEST_BASE_URL || "http://127.0.0.1:3000";
     });
     const select = (name) => page.getByRole("combobox", { name });
     await page.goto(baseURL);
+    await page
+      .getByRole("dialog", { name: "A quick guide to Local Haven" })
+      .waitFor();
+    await page.getByRole("button", { name: "Skip", exact: true }).click();
     await rows(12);
     assert.equal(
       await page
@@ -176,8 +180,12 @@ const baseURL = process.env.TEST_BASE_URL || "http://127.0.0.1:3000";
     await page
       .getByRole("button", { name: "New message", exact: true })
       .click();
-    await page.getByRole("combobox", { name: "Tenant", exact: true }).selectOption({ index: 1 });
-    await page.getByRole("combobox", { name: "Source", exact: true }).selectOption("WhatsApp");
+    await page
+      .getByRole("combobox", { name: "Tenant", exact: true })
+      .selectOption({ index: 1 });
+    await page
+      .getByRole("combobox", { name: "Source", exact: true })
+      .selectOption("WhatsApp");
     await page
       .getByLabel("Message", { exact: true })
       .fill("PARCEL core flow verification");
@@ -260,6 +268,10 @@ const baseURL = process.env.TEST_BASE_URL || "http://127.0.0.1:3000";
       }, mode);
       const p = await context.newPage();
       await p.goto(baseURL);
+      await p
+        .getByRole("dialog", { name: "A quick guide to Local Haven" })
+        .waitFor();
+      await p.getByRole("button", { name: "Skip", exact: true }).click();
       await p.waitForSelector("tbody tr");
       await p.getByRole("button", { name: "New message", exact: true }).click();
       await p

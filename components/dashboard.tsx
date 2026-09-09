@@ -1,12 +1,8 @@
 "use client";
-import {
-  useEffect,
-  useRef,
-  useState,
-  type FormEvent,
-  type ReactNode,
-} from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import Icon from "./icon";
+import Modal from "./modal";
+import DemoTesting from "./demo-testing";
 import DemoConversation from "./demo-conversation";
 import {
   addRule,
@@ -40,51 +36,6 @@ function Badge({ category }: { category: string }) {
       <span className="dot" />
       {category}
     </span>
-  );
-}
-function Modal({
-  title,
-  children,
-  onClose,
-}: {
-  title: string;
-  children: ReactNode;
-  onClose: () => void;
-}) {
-  const ref = useRef<HTMLDialogElement>(null);
-  useEffect(() => {
-    const dialog = ref.current;
-    const trigger = document.activeElement as HTMLElement | null;
-    dialog?.showModal();
-    return () => {
-      dialog?.close();
-      trigger?.focus();
-    };
-  }, []);
-  return (
-    <dialog
-      ref={ref}
-      aria-label={title}
-      onCancel={(event) => {
-        event.preventDefault();
-        onClose();
-      }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <div className="modal-head">
-        <h2>{title}</h2>
-        <button
-          className="icon-button"
-          aria-label="Close dialog"
-          onClick={onClose}
-        >
-          <Icon name="close" />
-        </button>
-      </div>
-      {children}
-    </dialog>
   );
 }
 export default function Dashboard() {
@@ -463,9 +414,7 @@ export default function Dashboard() {
             <span>/</span>
             <strong>{view}</strong>
           </div>
-          <span className="topbar-note">
-            <span className="dot" /> All your conversations, together
-          </span>
+          <DemoTesting />
         </header>
         <div className="page-content">
           <div className="page-heading">

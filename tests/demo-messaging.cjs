@@ -26,9 +26,18 @@ const baseURL = process.env.TEST_BASE_URL || "http://127.0.0.1:3000";
       return route.continue();
     });
     await page.goto(baseURL);
+    await page
+      .getByRole("dialog", { name: "A quick guide to Local Haven" })
+      .waitFor();
+    await page.getByRole("button", { name: "Skip", exact: true }).click();
     await page.waitForSelector("tbody tr");
-    const openFirst = () =>
-      page.locator("tbody .tenant-message").first().click();
+    const openFirst = async () => {
+      await page.locator("tbody .tenant-message").first().click();
+      await page.waitForFunction(() => {
+        const composer = document.querySelector("#demo-reply");
+        return composer && !composer.disabled;
+      });
+    };
     const close = () =>
       page.getByRole("button", { name: "Close dialog" }).click();
     await openFirst();
@@ -164,6 +173,10 @@ const baseURL = process.env.TEST_BASE_URL || "http://127.0.0.1:3000";
     );
     const p = await blocked.newPage();
     await p.goto(baseURL);
+    await p
+      .getByRole("dialog", { name: "A quick guide to Local Haven" })
+      .waitFor();
+    await p.getByRole("button", { name: "Skip", exact: true }).click();
     await p.waitForSelector("tbody tr");
     await p.locator("tbody .tenant-message").first().click();
     for (const text of ["Local one", "Local two"]) {

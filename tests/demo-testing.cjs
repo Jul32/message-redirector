@@ -1,0 +1,194 @@
+const { chromium } = require("playwright");
+const assert = require("node:assert/strict");
+const baseURL = process.env.TEST_BASE_URL || "http://127.0.0.1:3000";
+const guideTitle = "A quick guide to Local Haven";
+
+(async () => {
+  const browser = await chromium.launch({ args: ["--no-sandbox"] });
+  try {
+    const page = await browser.newPage();
+    const errors = [];
+    page.on("pageerror", (e) => errors.push(e.message));
+    await page.goto(baseURL);
+    await page.getByRole("dialog", { name: guideTitle }).waitFor();
+    await page
+      .getByRole("heading", { name: "All tenant communication in one inbox" })
+      .waitFor();
+    assert.equal(
+      await page
+        .getByRole("button", { name: "Back", exact: true })
+        .isDisabled(),
+      true,
+    );
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await page
+      .getByRole("heading", { name: "Stay organized automatically" })
+      .waitFor();
+    await page.getByRole("button", { name: "Back", exact: true }).click();
+    await page
+      .getByRole("heading", { name: "All tenant communication in one inbox" })
+      .waitFor();
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await page
+      .getByRole("heading", { name: "Reply without leaving Local Haven" })
+      .waitFor();
+    await page
+      .getByRole("button", { name: "Explore demo", exact: true })
+      .click();
+    assert.equal(
+      await page.evaluate(() => localStorage.getItem("haven-demo-guide-v1")),
+      "seen",
+    );
+    await page.reload();
+    await page.waitForSelector("tbody tr");
+    assert.equal(await page.getByRole("dialog").count(), 0);
+    await page
+      .getByRole("button", { name: "View demo guide", exact: true })
+      .click();
+    await page
+      .getByRole("heading", { name: "All tenant communication in one inbox" })
+      .waitFor();
+    await page.getByRole("button", { name: "Skip", exact: true }).click();
+    await page
+      .getByRole("button", { name: "Give feedback", exact: true })
+      .click();
+    await page.getByRole("button", { name: "Submit", exact: true }).click();
+    assert.equal(await page.locator(".feedback-success").count(), 0);
+    await page.getByLabel("What did you like?").fill("The unified inbox");
+    await page.getByLabel("What was confusing?").fill("Nothing yet");
+    await page
+      .getByLabel("What feels missing?")
+      .fill("Real integrations later");
+    await page.getByRole("radio", { name: "Maybe", exact: true }).check();
+    // Dispatch twice in the same event turn, before React can replace the form.
+    await page.locator(".feedback-form").evaluate((form) => {
+      form.requestSubmit();
+      form.requestSubmit();
+    });
+    await page
+      .getByText("Thank you for your feedback.", { exact: true })
+      .waitFor();
+    let records = await page.evaluate(() =>
+      Object.keys(localStorage)
+        .filter((k) => k.startsWith("haven-demo-feedback-v1:"))
+        .map((k) => JSON.parse(localStorage.getItem(k))),
+    );
+    assert.equal(records.length, 1);
+    assert.equal(records[0].wouldUse, "Maybe");
+    assert.equal(records[0].liked, "The unified inbox");
+    assert.equal(records[0].name, undefined);
+    assert.equal(records[0].email, undefined);
+    await page.getByRole("button", { name: "Done", exact: true }).click();
+    await page.reload();
+    await page.waitForSelector("tbody tr");
+    assert.equal(
+      await page.evaluate(
+        () =>
+          Object.keys(localStorage).filter((k) =>
+            k.startsWith("haven-demo-feedback-v1:"),
+          ).length,
+      ),
+      1,
+    );
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page
+      .getByRole("button", { name: "Give feedback", exact: true })
+      .click();
+    await page.getByRole("radio", { name: "Yes", exact: true }).check();
+    await page.getByLabel("Name (optional)").fill("Demo Tester");
+    await page.getByLabel("Email (optional)").fill("tester@example.com");
+    assert.equal(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+      true,
+    );
+    await page.getByRole("button", { name: "Submit", exact: true }).click();
+    await page.getByRole("button", { name: "Done", exact: true }).click();
+    records = await page.evaluate(() =>
+      Object.keys(localStorage)
+        .filter((k) => k.startsWith("haven-demo-feedback-v1:"))
+        .map((k) => JSON.parse(localStorage.getItem(k))),
+    );
+    assert.equal(records.length, 2);
+    assert.ok(
+      records.some(
+        (r) => r.email === "tester@example.com" && r.wouldUse === "Yes",
+      ),
+    );
+    await page
+      .getByRole("button", { name: "View demo guide", exact: true })
+      .click();
+    await page.keyboard.press("Escape");
+    await page.getByRole("dialog").waitFor({ state: "hidden" });
+    assert.deepEqual(errors, []);
+    // First-visit skip is remembered independently of finishing the guide.
+    const fresh = await browser.newPage({
+      viewport: { width: 390, height: 844 },
+    });
+    await fresh.goto(baseURL);
+    await fresh.getByRole("button", { name: "Skip", exact: true }).click();
+    await fresh.reload();
+    await fresh.waitForSelector("tbody tr");
+    assert.equal(await fresh.getByRole("dialog").count(), 0);
+    await fresh
+      .getByRole("button", { name: "Give feedback", exact: true })
+      .click();
+    await fresh.getByRole("button", { name: "Cancel", exact: true }).click();
+    assert.equal(await fresh.getByRole("dialog").count(), 0);
+    // Storage failure is honest, preserves the form, and allows a successful retry.
+    const blocked = await browser.newContext();
+    await blocked.addInitScript(() => {
+      window.failWrites = true;
+      const original = Storage.prototype.setItem;
+      Storage.prototype.setItem = function (...args) {
+        if (window.failWrites) throw new Error("Blocked storage");
+        return original.apply(this, args);
+      };
+    });
+    const p = await blocked.newPage();
+    await p.goto(baseURL);
+    await p.getByRole("button", { name: "Skip", exact: true }).click();
+    await p
+      .getByText("Guide dismissed for this visit.", { exact: false })
+      .waitFor();
+    await p.getByRole("button", { name: "Give feedback", exact: true }).click();
+    await p.getByLabel("What did you like?").fill("Keep this draft");
+    await p.getByRole("radio", { name: "No", exact: true }).check();
+    await p.getByRole("button", { name: "Submit", exact: true }).click();
+    await p
+      .getByRole("alert")
+      .filter({ hasText: "could not be saved" })
+      .waitFor();
+    assert.equal(
+      await p.getByLabel("What did you like?").inputValue(),
+      "Keep this draft",
+    );
+    assert.equal(await p.locator(".feedback-success").count(), 0);
+    await p.evaluate(() => {
+      window.failWrites = false;
+    });
+    await p.getByRole("button", { name: "Submit", exact: true }).click();
+    await p
+      .getByText("Thank you for your feedback.", { exact: true })
+      .waitFor();
+    assert.equal(
+      await p.evaluate(
+        () =>
+          Object.keys(localStorage).filter((k) =>
+            k.startsWith("haven-demo-feedback-v1:"),
+          ).length,
+      ),
+      1,
+    );
+    console.log(
+      "PASS: first visit, Next/Back/finish/skip/reopen, reload memory, anonymous and optional feedback, duplicate prevention, mobile, storage errors and retry.",
+    );
+  } finally {
+    await browser.close();
+  }
+})().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
