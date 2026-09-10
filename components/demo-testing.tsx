@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import Modal from "./modal";
 import {
@@ -256,7 +257,7 @@ function FeedbackForm({
         )}
         <p className="privacy-disclosure">
           By submitting feedback, you acknowledge that your information will be
-          handled as described in our <a href="/privacy">Privacy Policy</a>.
+          handled as described in our <Link href="/privacy">Privacy Policy</Link>.
         </p>
         <div className="form-actions">
           <button

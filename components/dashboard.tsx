@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import Icon from "./icon";
 import Modal from "./modal";
@@ -360,7 +361,7 @@ export default function Dashboard() {
               Fictional demo data. Please do not enter real tenant or sensitive
               information.
             </span>
-            <a href="/privacy">Privacy Policy</a>
+            <Link href="/privacy">Privacy Policy</Link>
           </div>
           {storageNotice && (
             <div className="storage-notice" role="status">
