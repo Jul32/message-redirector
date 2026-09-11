@@ -175,7 +175,11 @@ const guideTitle = "A quick guide to Local Haven";
         contentType: "application/json",
         body: JSON.stringify(
           attempts.length === 1
-            ? { error: "Private provider diagnostic" }
+            ? {
+                error:
+                  "Your feedback could not be saved. Your answers have been kept. Please try again later.",
+                code: "FEEDBACK_SAVE_FAILED",
+              }
             : { success: true },
         ),
       });
@@ -191,7 +195,7 @@ const guideTitle = "A quick guide to Local Haven";
     await p.getByRole("button", { name: "Submit", exact: true }).click();
     await p
       .getByRole("alert")
-      .filter({ hasText: "could not be sent" })
+      .filter({ hasText: "could not be saved" })
       .waitFor();
     assert.equal(
       await p.getByLabel("What did you like?").inputValue(),
@@ -214,6 +218,32 @@ const guideTitle = "A quick guide to Local Haven";
     );
     assert.equal(attempts.length, 2);
     assert.deepEqual(attempts[0], attempts[1]);
+    await p.getByRole("button", { name: "Done", exact: true }).click();
+    await p.unroute("**/api/feedback");
+    await p.route("**/api/feedback", (route) =>
+      route.fulfill({
+        status: 200,
+        json: {
+          success: true,
+          saved: true,
+          emailSent: false,
+          code: "FEEDBACK_NOTIFICATION_FAILED",
+        },
+      }),
+    );
+    await p.getByRole("button", { name: "Give feedback", exact: true }).click();
+    await p.getByRole("radio", { name: "Maybe", exact: true }).check();
+    await p.getByRole("button", { name: "Submit", exact: true }).click();
+    await p
+      .getByText(
+        "Your feedback was saved, but the notification email could not be sent. You do not need to submit it again.",
+        { exact: true },
+      )
+      .waitFor();
+    assert.equal(
+      await p.getByRole("button", { name: "Submit", exact: true }).count(),
+      0,
+    );
     console.log(
       "PASS: first visit, Next/Back/finish/skip/reopen, reload memory, anonymous and optional feedback, duplicate prevention, mobile, sending state, server failures and idempotent retry (mocked endpoint).",
     );

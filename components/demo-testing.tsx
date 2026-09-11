@@ -137,6 +137,7 @@ function FeedbackForm({
 }) {
   const [sending, setSending] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [emailSent, setEmailSent] = useState(true);
   const [error, setError] = useState("");
   const locked = useRef(false);
   const pending = useRef<{ fingerprint: string; payload: DemoFeedback } | null>(
@@ -171,12 +172,15 @@ function FeedbackForm({
           },
         };
       }
-      await sendFeedback(pending.current.payload);
+      const result = await sendFeedback(pending.current.payload);
+      setEmailSent(result.emailSent);
       setSubmitted(true);
     } catch (error) {
       locked.current = false;
       setError(
-        "Feedback could not be sent right now. Please try again shortly. Your answers have been kept.",
+        error instanceof Error
+          ? error.message
+          : "Feedback could not be sent right now. Please try again shortly. Your answers have been kept.",
       );
     } finally {
       setSending(false);
@@ -188,7 +192,9 @@ function FeedbackForm({
       <div className="feedback-success">
         <h3>Thank you for your feedback.</h3>
         <p role="status">
-          Your feedback has been sent to the Local Haven team.
+          {emailSent
+            ? "Your feedback has been sent to the Local Haven team."
+            : "Your feedback was saved, but the notification email could not be sent. You do not need to submit it again."}
         </p>
         <button className="primary" onClick={onDone}>
           Done
@@ -257,7 +263,8 @@ function FeedbackForm({
         )}
         <p className="privacy-disclosure">
           By submitting feedback, you acknowledge that your information will be
-          handled as described in our <Link href="/privacy">Privacy Policy</Link>.
+          handled as described in our{" "}
+          <Link href="/privacy">Privacy Policy</Link>.
         </p>
         <div className="form-actions">
           <button

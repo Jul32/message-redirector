@@ -2,8 +2,39 @@ import { Resend } from "resend";
 import { getSupabase } from "../../../lib/supabase-server.ts";
 
 export const runtime = "nodejs";
-const unavailable =
-  "Feedback could not be sent right now. Please try again shortly. Your answers have been kept.";
+// Log only provider codes/statuses, never raw errors, credentials, or answers.
+function diagnostic(stage: string, error: unknown, status?: number) {
+  const value =
+    error && typeof error === "object"
+      ? (error as Record<string, unknown>)
+      : {};
+  const code = typeof value.code === "string" ? value.code : value.name;
+  const safeCode =
+    typeof code === "string" && /^[a-zA-Z0-9_]{1,64}$/.test(code)
+      ? code
+      : "unknown_error";
+  console.error("[feedback]", { stage, code: safeCode, status });
+}
+function notificationFailed(saved: boolean, code: string, status = 502) {
+  if (saved)
+    return Response.json({
+      success: true,
+      saved: true,
+      emailSent: false,
+      code,
+    });
+  return Response.json(
+    {
+      success: false,
+      saved: false,
+      emailSent: false,
+      code,
+      error:
+        "The feedback notification could not be sent. Your answers have been kept. Please try again later.",
+    },
+    { status },
+  );
+}
 const emailPattern = /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/;
 const uuidPattern =
   /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i;
@@ -72,10 +103,13 @@ export async function POST(request: Request) {
 
   // Save before emailing. The write-only RPC makes retries safe without granting
   // public readers access to names, email addresses, or previous feedback.
+  let saved = false;
+  let databaseStage = "supabase_config";
   try {
     const db = getSupabase();
     if (db) {
-      const { error } = await db.rpc("submit_demo_feedback", {
+      databaseStage = "supabase_insert";
+      const { error, status } = await db.rpc("submit_demo_feedback", {
         payload: {
           id: input.id,
           liked: input.liked,
@@ -87,13 +121,29 @@ export async function POST(request: Request) {
           created_at: input.createdAt,
         },
       });
-      if (error) throw error;
+      if (error) {
+        diagnostic(databaseStage, error, status);
+        return Response.json(
+          {
+            error:
+              "Your feedback could not be saved. Your answers have been kept. Please try again later.",
+            code: "FEEDBACK_SAVE_FAILED",
+          },
+          { status: 503 },
+        );
+      }
+      saved = true;
     }
-  } catch {
-    console.error(
-      "[feedback] Supabase persistence failed. Email was not sent.",
+  } catch (error) {
+    diagnostic(databaseStage, error);
+    return Response.json(
+      {
+        error:
+          "Your feedback could not be saved. Your answers have been kept. Please try again later.",
+        code: "FEEDBACK_SAVE_FAILED",
+      },
+      { status: 503 },
     );
-    return fail(unavailable, 503);
   }
 
   // These variables are read only inside the server route, never returned or logged.
@@ -101,11 +151,11 @@ export async function POST(request: Request) {
   const recipient = process.env.FEEDBACK_EMAIL?.trim();
   if (!recipient || !emailPattern.test(recipient)) {
     console.error("[feedback] FEEDBACK_EMAIL is missing or invalid.");
-    return fail(unavailable, 503);
+    return notificationFailed(saved, "FEEDBACK_NOTIFICATION_CONFIG", 503);
   }
   if (!apiKey) {
     console.error("[feedback] RESEND_API_KEY is not configured.");
-    return fail(unavailable, 503);
+    return notificationFailed(saved, "FEEDBACK_NOTIFICATION_CONFIG", 503);
   }
   const answer = (key: string) =>
     typeof input[key] === "string" && input[key].trim()
@@ -135,13 +185,12 @@ export async function POST(request: Request) {
       { idempotencyKey: `feedback/${input.id}` },
     );
     if (error || !data?.id) {
-      console.error("[feedback] Resend did not accept the feedback email.");
-      return fail(unavailable, 502);
+      diagnostic("resend_send", error, error?.statusCode ?? undefined);
+      return notificationFailed(saved, "FEEDBACK_NOTIFICATION_FAILED");
     }
     return Response.json({ success: true });
-  } catch {
-    // Never log provider errors, which may contain headers or private addresses.
-    console.error("[feedback] Unable to reach Resend.");
-    return fail(unavailable, 502);
+  } catch (error) {
+    diagnostic("resend_send", error);
+    return notificationFailed(saved, "FEEDBACK_NOTIFICATION_FAILED");
   }
 }

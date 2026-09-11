@@ -38,20 +38,26 @@ export function feedbackId() {
 }
 
 /** Feedback is sent only through the server; no credentials are available here. */
-export async function sendFeedback(feedback: DemoFeedback): Promise<void> {
+export async function sendFeedback(
+  feedback: DemoFeedback,
+): Promise<{ emailSent: boolean }> {
   const response = await fetch("/api/feedback", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(feedback),
     signal: AbortSignal.timeout(20000),
   });
-  if (!response.ok)
-    throw new Error(
-      "Feedback could not be sent right now. Please try again shortly. Your answers have been kept.",
-    );
-  const result = await response.json();
-  if (result.success !== true)
+  const result = await response.json().catch(() => null);
+  if (!response.ok) {
+    const message =
+      result && typeof result.error === "string"
+        ? result.error
+        : "Feedback could not be sent right now. Please try again shortly. Your answers have been kept.";
+    throw new Error(message);
+  }
+  if (result?.success !== true)
     throw new Error(
       "Could not confirm your feedback was sent. Please try again.",
     );
+  return { emailSent: result.emailSent !== false };
 }

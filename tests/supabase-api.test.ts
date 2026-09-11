@@ -34,6 +34,7 @@ test("official Supabase SDK routes use the configured database and feedback is s
   const calls: { url: URL; method: string; body: Record<string, unknown> }[] =
     [];
   let failDatabase = false;
+  let failEmail = false;
   t.mock.method(console, "error", () => {});
   t.mock.method(
     globalThis,
@@ -43,7 +44,12 @@ test("official Supabase SDK routes use the configured database and feedback is s
       const body = options?.body ? JSON.parse(String(options.body)) : {};
       calls.push({ url: parsed, method: options?.method ?? "GET", body });
       if (parsed.hostname === "api.resend.com")
-        return Response.json({ id: "email-test" });
+        return failEmail
+          ? Response.json(
+              { name: "validation_error", message: "private key diagnostic" },
+              { status: 401 },
+            )
+          : Response.json({ id: "email-test" });
       assert.equal(parsed.hostname, "demo.example.supabase.co");
       assert.equal(
         new Headers(options?.headers).get("apikey"),
@@ -151,6 +157,28 @@ test("official Supabase SDK routes use the configured database and feedback is s
     "Yes",
   );
   assert.equal(calls[1].url.hostname, "api.resend.com");
+  failEmail = true;
+  calls.length = 0;
+  const savedWithoutEmail = await feedback(request(payload));
+  assert.equal(savedWithoutEmail.status, 200);
+  assert.deepEqual(await savedWithoutEmail.json(), {
+    success: true,
+    saved: true,
+    emailSent: false,
+    code: "FEEDBACK_NOTIFICATION_FAILED",
+  });
+  assert.equal(calls.length, 2);
+  assert.ok(calls[0].url.pathname.endsWith("submit_demo_feedback"));
+  for (const key of ["RESEND_API_KEY", "FEEDBACK_EMAIL"]) {
+    const original = process.env[key];
+    delete process.env[key];
+    calls.length = 0;
+    const savedWithoutConfig = await feedback(request(payload));
+    assert.equal(savedWithoutConfig.status, 200);
+    assert.equal((await savedWithoutConfig.json()).saved, true);
+    assert.equal(calls.length, 1);
+    process.env[key] = original;
+  }
   failDatabase = true;
   calls.length = 0;
   const error = await feedback(request(payload));
