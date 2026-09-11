@@ -35,6 +35,17 @@ test("feedback route validates input and calls the real Resend SDK with private 
     if (previousRecipient === undefined) delete process.env.FEEDBACK_EMAIL;
     else process.env.FEEDBACK_EMAIL = previousRecipient;
   });
+  const previousUrl = process.env.SUPABASE_URL,
+    previousPublishableKey = process.env.SUPABASE_PUBLISHABLE_KEY;
+  t.after(() => {
+    if (previousUrl === undefined) delete process.env.SUPABASE_URL;
+    else process.env.SUPABASE_URL = previousUrl;
+    if (previousPublishableKey === undefined)
+      delete process.env.SUPABASE_PUBLISHABLE_KEY;
+    else process.env.SUPABASE_PUBLISHABLE_KEY = previousPublishableKey;
+  });
+  process.env.SUPABASE_URL = "https://demo.example.supabase.co";
+  process.env.SUPABASE_PUBLISHABLE_KEY = "sb_publishable_test";
   process.env.RESEND_API_KEY = "test-only-placeholder";
   process.env.FEEDBACK_EMAIL = "owner@example.com";
   const logs: unknown[][] = [];
@@ -50,6 +61,8 @@ test("feedback route validates input and calls the real Resend SDK with private 
     globalThis,
     "fetch",
     async (url: string | URL | Request, options?: RequestInit) => {
+      if (String(url).endsWith("/rpc/submit_demo_feedback"))
+        return new Response(null, { status: 204 });
       calls.push({
         url: String(url),
         body: JSON.parse(String(options?.body)),
@@ -73,7 +86,11 @@ test("feedback route validates input and calls the real Resend SDK with private 
     }),
   );
   assert.equal(success.status, 200);
-  assert.deepEqual(await success.json(), { success: true });
+  assert.deepEqual(await success.json(), {
+    success: true,
+    saved: true,
+    emailSent: true,
+  });
   assert.equal(calls.length, 1);
   assert.equal(calls[0].url, "https://api.resend.com/emails");
   assert.deepEqual(calls[0].body.to, ["owner@example.com"]);
@@ -107,13 +124,21 @@ test("feedback route validates input and calls the real Resend SDK with private 
   assert.ok(String(calls[1].body.text).includes("Name: (Not provided)"));
   const proxied = new Request("http://internal:3000/api/feedback", {
     method: "POST",
-    headers: {"content-type":"application/json",host:"demo.example.com",origin:"https://demo.example.com"},
+    headers: {
+      "content-type": "application/json",
+      host: "demo.example.com",
+      origin: "https://demo.example.com",
+    },
     body: JSON.stringify(submission),
   });
   assert.equal((await POST(proxied)).status, 200);
   const loopback = new Request("http://localhost:3000/api/feedback", {
     method: "POST",
-    headers: {"content-type":"application/json",host:"127.0.0.1:3000",origin:"http://127.0.0.1:3000"},
+    headers: {
+      "content-type": "application/json",
+      host: "127.0.0.1:3000",
+      origin: "http://127.0.0.1:3000",
+    },
     body: JSON.stringify(submission),
   });
   assert.equal((await POST(loopback)).status, 200);
@@ -167,6 +192,13 @@ test("feedback route validates input and calls the real Resend SDK with private 
   throwNetwork = true;
   response = await POST(request());
   assert.equal(response.status, 502);
+  const sendsBeforeMissingDatabase = calls.length;
+  delete process.env.SUPABASE_URL;
+  delete process.env.SUPABASE_PUBLISHABLE_KEY;
+  response = await POST(request());
+  assert.equal(response.status, 503);
+  assert.equal((await response.json()).code, "FEEDBACK_SAVE_CONFIG");
+  assert.equal(calls.length, sendsBeforeMissingDatabase);
   const logged = JSON.stringify(logs);
   assert.ok(!logged.includes("test-only-placeholder"));
   assert.ok(!logged.includes("owner@example.com"));

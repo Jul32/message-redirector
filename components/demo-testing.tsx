@@ -190,8 +190,12 @@ function FeedbackForm({
   if (submitted)
     return (
       <div className="feedback-success">
-        <h3>Thank you for your feedback.</h3>
-        <p role="status">
+        <h3>
+          {emailSent
+            ? "Thank you for your feedback."
+            : "Feedback saved — email not sent"}
+        </h3>
+        <p role={emailSent ? "status" : "alert"}>
           {emailSent
             ? "Your feedback has been sent to the Local Haven team."
             : "Your feedback was saved, but the notification email could not be sent. You do not need to submit it again."}

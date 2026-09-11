@@ -17,12 +17,17 @@ function diagnostic(stage: string, error: unknown, status?: number) {
 }
 function notificationFailed(saved: boolean, code: string, status = 502) {
   if (saved)
-    return Response.json({
-      success: true,
-      saved: true,
-      emailSent: false,
-      code,
-    });
+    return Response.json(
+      {
+        success: false,
+        saved: true,
+        emailSent: false,
+        code,
+        error:
+          "Your feedback was saved, but the notification email could not be sent. You do not need to submit it again.",
+      },
+      { status },
+    );
   return Response.json(
     {
       success: false,
@@ -107,6 +112,22 @@ export async function POST(request: Request) {
   let databaseStage = "supabase_config";
   try {
     const db = getSupabase();
+    if (!db) {
+      console.error(
+        "[feedback] Supabase is not configured; feedback was not saved.",
+      );
+      return Response.json(
+        {
+          success: false,
+          saved: false,
+          emailSent: false,
+          code: "FEEDBACK_SAVE_CONFIG",
+          error:
+            "Feedback storage is unavailable. Your answers have been kept. Please try again later.",
+        },
+        { status: 503 },
+      );
+    }
     if (db) {
       databaseStage = "supabase_insert";
       const { error, status } = await db.rpc("submit_demo_feedback", {
@@ -151,11 +172,11 @@ export async function POST(request: Request) {
   const recipient = process.env.FEEDBACK_EMAIL?.trim();
   if (!recipient || !emailPattern.test(recipient)) {
     console.error("[feedback] FEEDBACK_EMAIL is missing or invalid.");
-    return notificationFailed(saved, "FEEDBACK_NOTIFICATION_CONFIG", 503);
+    return notificationFailed(saved, "FEEDBACK_RECIPIENT_INVALID", 503);
   }
   if (!apiKey) {
     console.error("[feedback] RESEND_API_KEY is not configured.");
-    return notificationFailed(saved, "FEEDBACK_NOTIFICATION_CONFIG", 503);
+    return notificationFailed(saved, "FEEDBACK_EMAIL_KEY_MISSING", 503);
   }
   const answer = (key: string) =>
     typeof input[key] === "string" && input[key].trim()
@@ -188,7 +209,7 @@ export async function POST(request: Request) {
       diagnostic("resend_send", error, error?.statusCode ?? undefined);
       return notificationFailed(saved, "FEEDBACK_NOTIFICATION_FAILED");
     }
-    return Response.json({ success: true });
+    return Response.json({ success: true, saved: true, emailSent: true });
   } catch (error) {
     diagnostic("resend_send", error);
     return notificationFailed(saved, "FEEDBACK_NOTIFICATION_FAILED");

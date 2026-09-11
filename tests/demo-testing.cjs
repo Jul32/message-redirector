@@ -19,7 +19,7 @@ const guideTitle = "A quick guide to Local Haven";
       await route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({ success: true }),
+        body: JSON.stringify({ success: true, saved: true, emailSent: true }),
       });
     });
     page.on("pageerror", (e) => errors.push(e.message));
@@ -180,7 +180,7 @@ const guideTitle = "A quick guide to Local Haven";
                   "Your feedback could not be saved. Your answers have been kept. Please try again later.",
                 code: "FEEDBACK_SAVE_FAILED",
               }
-            : { success: true },
+            : { success: true, saved: true, emailSent: true },
         ),
       });
     });
@@ -222,9 +222,9 @@ const guideTitle = "A quick guide to Local Haven";
     await p.unroute("**/api/feedback");
     await p.route("**/api/feedback", (route) =>
       route.fulfill({
-        status: 200,
+        status: 502,
         json: {
-          success: true,
+          success: false,
           saved: true,
           emailSent: false,
           code: "FEEDBACK_NOTIFICATION_FAILED",
@@ -242,6 +242,36 @@ const guideTitle = "A quick guide to Local Haven";
       .waitFor();
     assert.equal(
       await p.getByRole("button", { name: "Submit", exact: true }).count(),
+      0,
+    );
+    await p
+      .getByRole("heading", {
+        name: "Feedback saved — email not sent",
+        exact: true,
+      })
+      .waitFor();
+    assert.equal(
+      await p
+        .getByText("Thank you for your feedback.", { exact: true })
+        .count(),
+      0,
+    );
+    await p.getByRole("button", { name: "Done", exact: true }).click();
+    await p.unroute("**/api/feedback");
+    await p.route("**/api/feedback", (route) =>
+      route.fulfill({ status: 200, json: { success: true } }),
+    );
+    await p.getByRole("button", { name: "Give feedback", exact: true }).click();
+    await p.getByRole("radio", { name: "Maybe", exact: true }).check();
+    await p.getByRole("button", { name: "Submit", exact: true }).click();
+    await p
+      .getByRole("alert")
+      .filter({ hasText: "Could not confirm" })
+      .waitFor();
+    assert.equal(
+      await p
+        .getByText("Thank you for your feedback.", { exact: true })
+        .count(),
       0,
     );
     console.log(

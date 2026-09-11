@@ -48,6 +48,12 @@ export async function sendFeedback(
     signal: AbortSignal.timeout(20000),
   });
   const result = await response.json().catch(() => null);
+  if (
+    result?.success === false &&
+    result.saved === true &&
+    result.emailSent === false
+  )
+    return { emailSent: false };
   if (!response.ok) {
     const message =
       result && typeof result.error === "string"
@@ -55,9 +61,13 @@ export async function sendFeedback(
         : "Feedback could not be sent right now. Please try again shortly. Your answers have been kept.";
     throw new Error(message);
   }
-  if (result?.success !== true)
+  if (
+    result?.success !== true ||
+    result.saved !== true ||
+    result.emailSent !== true
+  )
     throw new Error(
       "Could not confirm your feedback was sent. Please try again.",
     );
-  return { emailSent: result.emailSent !== false };
+  return { emailSent: true };
 }

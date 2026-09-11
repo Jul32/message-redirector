@@ -160,12 +160,14 @@ test("official Supabase SDK routes use the configured database and feedback is s
   failEmail = true;
   calls.length = 0;
   const savedWithoutEmail = await feedback(request(payload));
-  assert.equal(savedWithoutEmail.status, 200);
+  assert.equal(savedWithoutEmail.status, 502);
   assert.deepEqual(await savedWithoutEmail.json(), {
-    success: true,
+    success: false,
     saved: true,
     emailSent: false,
     code: "FEEDBACK_NOTIFICATION_FAILED",
+    error:
+      "Your feedback was saved, but the notification email could not be sent. You do not need to submit it again.",
   });
   assert.equal(calls.length, 2);
   assert.ok(calls[0].url.pathname.endsWith("submit_demo_feedback"));
@@ -174,7 +176,7 @@ test("official Supabase SDK routes use the configured database and feedback is s
     delete process.env[key];
     calls.length = 0;
     const savedWithoutConfig = await feedback(request(payload));
-    assert.equal(savedWithoutConfig.status, 200);
+    assert.equal(savedWithoutConfig.status, 503);
     assert.equal((await savedWithoutConfig.json()).saved, true);
     assert.equal(calls.length, 1);
     process.env[key] = original;

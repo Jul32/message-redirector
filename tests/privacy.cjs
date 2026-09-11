@@ -12,7 +12,10 @@ const baseURL = process.env.TEST_BASE_URL || "http://127.0.0.1:3000";
     page.on("pageerror", (e) => errors.push(e.message));
     await page.route("**/api/feedback", async (route) => {
       requests.push(route.request().postDataJSON());
-      await route.fulfill({ status: 200, json: { success: true } });
+      await route.fulfill({
+        status: 200,
+        json: { success: true, saved: true, emailSent: true },
+      });
     });
     const response = await page.goto(baseURL + "/privacy");
     assert.equal(response.status(), 200);
